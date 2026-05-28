@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ParkSmart – Sistema de Control de Parqueadero</title>
+  <meta name="description" content="Sistema de control de parqueadero con Cola (FIFO), Pila (LIFO), Árbol Binario de Búsqueda y sistema de pagos integrado.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="app-header">
+  <div class="header-brand">
+    <div class="brand-logo">🅿️</div>
+    <div>
+      <div class="brand-name">ParkSmart</div>
+      <div class="brand-sub">Sistema de Control de Parqueadero</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="hstat">
+      <span class="hstat-label">Ocupados</span>
+      <span class="hstat-value" id="header-occupied">0/20</span>
+    </div>
+    <div class="hstat">
+      <span class="hstat-label">En Espera</span>
+      <span class="hstat-value" id="header-waiting">0</span>
+    </div>
+    <div class="live-clock" id="live-clock">00:00:00</div>
+  </div>
+</header>
+
+<!-- ══════════════ LAYOUT ══════════════ -->
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <span class="nav-section-label">Principal</span>
+    <button class="nav-btn active" data-tab="dashboard" id="nav-dashboard">
+      <span class="nav-icon">📊</span> Dashboard
+    </button>
+    <button class="nav-btn" data-tab="spots" id="nav-spots">
+      <span class="nav-icon">🅿️</span> Mapa de Espacios
+    </button>
+
+    <span class="nav-section-label">Estructuras</span>
+    <button class="nav-btn" data-tab="queue" id="nav-queue">
+      <span class="nav-icon">🔵</span> Cola de Espera
+    </button>
+    <button class="nav-btn" data-tab="history" id="nav-history">
+      <span class="nav-icon">🟡</span> Historial (Pila)
+    </button>
+    <button class="nav-btn" data-tab="tree" id="nav-tree">
+      <span class="nav-icon">🟢</span> Árbol BST
+    </button>
+
+    <span class="nav-section-label">Finanzas</span>
+    <button class="nav-btn" data-tab="payments" id="nav-payments">
+      <span class="nav-icon">💳</span> Pagos
+    </button>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- ══ TAB: DASHBOARD ══ -->
+    <div class="tab-panel active" id="tab-dashboard">
+      <h1 class="page-title">📊 Dashboard del Parqueadero</h1>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card stat-red">
+          <span class="stat-label">Espacios Ocupados</span>
+          <span class="stat-value" id="stat-occupied">0</span>
+          <span class="stat-icon">🚗</span>
+        </div>
+        <div class="stat-card stat-green">
+          <span class="stat-label">Espacios Libres</span>
+          <span class="stat-value" id="stat-available">20</span>
+          <span class="stat-icon">✅</span>
+        </div>
+        <div class="stat-card stat-yellow">
+          <span class="stat-label">En Cola de Espera</span>
+          <span class="stat-value" id="stat-waiting">0</span>
+          <span class="stat-icon">⏳</span>
+        </div>
+        <div class="stat-card stat-blue">
+          <span class="stat-label">Ingresos del Día</span>
+          <span class="stat-value" id="stat-revenue" style="font-size:1.3rem">$0</span>
+          <span class="stat-icon">💰</span>
+        </div>
+        <div class="stat-card stat-purple">
+          <span class="stat-label">Vehículos Registrados (BST)</span>
+          <span class="stat-value" id="stat-registered">0</span>
+          <span class="stat-icon">🌳</span>
+        </div>
+        <div class="stat-card stat-cyan">
+          <span class="stat-label">Eventos (Pila)</span>
+          <span class="stat-value" id="stat-events">0</span>
+          <span class="stat-icon">📋</span>
+        </div>
+      </div>
+
+      <!-- Ocupación -->
+      <div class="glass-card occupancy-section">
+        <div class="card-title">🔶 Nivel de Ocupación</div>
+        <div class="occ-track">
+          <div class="occ-fill occ-green" id="occupancy-bar" style="width:0%"></div>
+        </div>
+        <span class="occ-pct" id="occupancy-pct">0% ocupado</span>
+      </div>
+
+      <!-- Formularios + Eventos -->
+      <div class="forms-grid">
+        <!-- Entrada -->
+        <div class="glass-card">
+          <div class="card-title">🟢 Registrar Entrada</div>
+          <form id="form-entry">
+            <div class="form-group">
+              <label for="entry-plate">Placa del Vehículo</label>
+              <input type="text" id="entry-plate" placeholder="Ej: ABC123" maxlength="8" style="text-transform:uppercase">
+            </div>
+            <div class="form-group">
+              <label for="entry-type">Tipo de Vehículo</label>
+              <select id="entry-type">
+                <option value="car">🚗 Automóvil</option>
+                <option value="moto">🏍️ Motocicleta</option>
+                <option value="truck">🚛 Camión / Bus</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="entry-driver">Nombre del Conductor</label>
+              <input type="text" id="entry-driver" placeholder="Nombre completo">
+            </div>
+            <button type="submit" class="btn btn-primary">🚀 Registrar Entrada</button>
+          </form>
+        </div>
+
+        <!-- Salida -->
+        <div class="glass-card">
+          <div class="card-title">🔴 Registrar Salida</div>
+          <form id="form-exit">
+            <div class="form-group">
+              <label for="exit-plate">Placa del Vehículo</label>
+              <input type="text" id="exit-plate" placeholder="Ej: ABC123" maxlength="8" style="text-transform:uppercase">
+            </div>
+            <div class="form-group">
+              <label for="exit-method">Método de Pago</label>
+              <select id="exit-method">
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
+                <option value="Tarjeta Crédito">💳 Tarjeta Crédito</option>
+                <option value="Nequi">📱 Nequi</option>
+                <option value="Daviplata">📱 Daviplata</option>
+                <option value="PSE">🏦 PSE</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <p style="font-size:0.78rem;color:var(--text-muted);padding:6px 0">
+                ℹ️ Haz clic en un espacio ocupado en el mapa para cargar la placa automáticamente.
+              </p>
+            </div>
+            <button type="submit" class="btn btn-danger">🔓 Registrar Salida y Cobrar</button>
+          </form>
+
+          <!-- Búsqueda rápida -->
+          <div style="margin-top:16px; padding-top:16px; border-top: 1px solid var(--border);">
+            <div class="card-title">🔍 Buscar Vehículo (BST)</div>
+            <div class="search-box">
+              <input type="text" id="search-plate" placeholder="Buscar por placa...">
+              <button class="btn" id="btn-search">Buscar</button>
+            </div>
+            <div id="search-result"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eventos recientes -->
+      <div class="glass-card">
+        <div class="section-header">
+          <div class="card-title">📋 Eventos Recientes (Pila - Top 6)</div>
+        </div>
+        <div class="events-list" id="recent-events">
+          <p class="empty-msg">No hay eventos recientes. Registra la entrada de un vehículo para comenzar.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: MAPA DE ESPACIOS ══ -->
+    <div class="tab-panel" id="tab-spots">
+      <h2 class="page-title">🅿️ Mapa de Espacios</h2>
+      <div class="glass-card" style="margin-bottom:16px">
+        <div style="display:flex;gap:20px;font-size:0.82rem">
+          <span>🟢 <strong>Libre</strong> – Espacio disponible</span>
+          <span>🔴 <strong>Ocupado</strong> – Haz clic para cargar placa en salida</span>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="spots-grid" id="spots-grid"></div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: COLA DE ESPERA ══ -->
+    <div class="tab-panel" id="tab-queue">
+      <h2 class="page-title">🔵 Cola de Espera (FIFO)</h2>
+      <div class="glass-card" style="margin-bottom:16px">
+        <p style="font-size:0.85rem;color:var(--text-secondary)">
+          <strong>Estructura de datos: Cola (Queue)</strong> — Los vehículos se agregan al
+          <em>final</em> de la cola cuando el parqueadero está lleno y se ingresan en orden
+          de llegada (<strong>FIFO: First In, First Out</strong>) cuando se libera un espacio.
+        </p>
+      </div>
+      <div class="queue-list" id="queue-list">
+        <p class="empty-msg">✅ No hay vehículos en espera.</p>
+      </div>
+    </div>
+
+    <!-- ══ TAB: HISTORIAL (PILA) ══ -->
+    <div class="tab-panel" id="tab-history">
+      <h2 class="page-title">🟡 Historial de Eventos (LIFO)</h2>
+      <div class="glass-card" style="margin-bottom:16px">
+        <p style="font-size:0.85rem;color:var(--text-secondary)">
+          <strong>Estructura de datos: Pila (Stack)</strong> — Cada entrada, salida o
+          encolamiento queda registrado en la pila. Los eventos más recientes se muestran
+          primero (<strong>LIFO: Last In, First Out</strong>). Capacidad máxima: 200 eventos.
+        </p>
+      </div>
+      <div class="history-list" id="history-list">
+        <p class="empty-msg">No hay eventos registrados aún.</p>
+      </div>
+    </div>
+
+    <!-- ══ TAB: ÁRBOL BST ══ -->
+    <div class="tab-panel" id="tab-tree">
+      <h2 class="page-title">🟢 Árbol Binario de Búsqueda (BST)</h2>
+      <div class="glass-card" style="margin-bottom:16px">
+        <p style="font-size:0.85rem;color:var(--text-secondary)">
+          <strong>Estructura de datos: BST</strong> — Cada vehículo que entra al parqueadero
+          se inserta en el árbol usando su <em>placa como llave</em>. Permite búsqueda eficiente
+          <strong>O(log n)</strong>. Los nodos <span style="color:var(--success)">verdes</span>
+          indican vehículos actualmente en el parqueadero.
+        </p>
+      </div>
+
+      <div class="glass-card" style="margin-bottom:16px; overflow-x:auto;">
+        <div class="card-title">🌳 Estructura del Árbol (Visualización)</div>
+        <div id="tree-visual">
+          <p class="empty-msg">El árbol BST está vacío. Registra vehículos para verlos aquí.</p>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title">📖 Recorrido In-Order (Placas ordenadas alfabéticamente)</div>
+        <div class="inorder-chips" id="tree-inorder"></div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: PAGOS ══ -->
+    <div class="tab-panel" id="tab-payments">
+      <h2 class="page-title">💳 Sistema de Pagos</h2>
+
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card stat-green">
+          <span class="stat-label">Ingresos Totales</span>
+          <span class="stat-value" id="pay-total-revenue" style="font-size:1.2rem">$0</span>
+          <span class="stat-icon">💰</span>
+        </div>
+        <div class="stat-card stat-blue">
+          <span class="stat-label">Pagos Hoy</span>
+          <span class="stat-value" id="pay-today-count">0</span>
+          <span class="stat-icon">📋</span>
+        </div>
+        <div class="stat-card stat-purple">
+          <span class="stat-label">Estadía Promedio</span>
+          <span class="stat-value" id="pay-avg-stay" style="font-size:1.2rem">0h 0m</span>
+          <span class="stat-icon">⏱️</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px">
+        <div class="glass-card">
+          <div class="card-title">💲 Tarifas Configurables</div>
+          <div class="rates-grid" id="rates-display"></div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title">📜 Historial de Pagos</div>
+          <div class="payment-list" id="payment-history">
+            <p class="empty-msg">No hay pagos registrados aún.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════ MODAL: PAGO ══════════════ -->
+<div class="modal-overlay" id="modal-payment">
+  <div class="modal-box">
+    <div class="modal-title">💳 Confirmar Pago</div>
+    <div class="payment-summary">
+      <div class="pay-summary-row"><span>Placa</span><strong id="modal-pay-plate">—</strong></div>
+      <div class="pay-summary-row"><span>Conductor</span><span id="modal-pay-driver">—</span></div>
+      <div class="pay-summary-row"><span>Hora de ingreso</span><span id="modal-pay-entry">—</span></div>
+      <div class="pay-summary-row"><span>Duración</span><span id="modal-pay-duration">—</span></div>
+      <div class="pay-summary-row"><span>Tarifa</span><span id="modal-pay-rate">—</span></div>
+      <div class="pay-summary-row"><span>Método</span><span id="modal-pay-method">—</span></div>
+      <div class="pay-summary-row total"><span>TOTAL A COBRAR</span><strong id="modal-pay-total">—</strong></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btn-cancel-pay">✖ Cancelar</button>
+      <button class="btn btn-success" id="btn-confirm-pay">✅ Confirmar Pago</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: RECIBO ══════════════ -->
+<div class="modal-overlay" id="modal-receipt">
+  <div class="modal-box" style="max-width:340px">
+    <div id="receipt-content"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" id="btn-close-receipt">✖ Cerrar</button>
+      <button class="btn btn-primary" id="btn-print-receipt">🖨️ Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TOAST CONTAINER ══════════════ -->
+<div id="toast-container"></div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script src="js/structures/Queue.js"></script>
+<script src="js/structures/Stack.js"></script>
+<script src="js/structures/BST.js"></script>
+<script src="js/PaymentSystem.js"></script>
+<script src="js/ParkingSystem.js"></script>
+<script src="js/UI.js"></script>
+<script>
+  // Inicializar sistema con 20 espacios
+  const parking   = new ParkingSystem(20);
+  const parkingUI = new ParkingUI(parking);
+
+  // ── Datos de demostración ──
+  const demo = [
+    { plate: 'PKS001', type: 'car',   driver: 'Carlos Martínez' },
+    { plate: 'MTO234', type: 'moto',  driver: 'Laura Gómez' },
+    { plate: 'BUS789', type: 'truck', driver: 'Pedro Ramírez' },
+    { plate: 'CAR456', type: 'car',   driver: 'Ana Torres' },
+    { plate: 'MOT111', type: 'moto',  driver: 'Luis Herrera' },
+    { plate: 'VEH999', type: 'car',   driver: 'Sofía Vargas' },
+  ];
+
+  // Simular algunas entradas con tiempos distintos
+  demo.forEach((v, i) => {
+    const result = parking.vehicleEntry(v.plate, v.type, v.driver);
+    if (result.success && !result.queued) {
+      // Ajustar tiempo de entrada para demostración
+      const vehicle = parking.spots.get(v.plate);
+      if (vehicle) {
+        vehicle.entryTime = new Date(Date.now() - (i + 1) * 25 * 60 * 1000).toISOString();
+      }
+    }
+  });
+
+  // Refrescar UI con datos de demo
+  parkingUI.renderAll();
+  parkingUI.updateHeaderStats();
+</script>
+
+</body>
+</html>
